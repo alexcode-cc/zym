@@ -4,12 +4,12 @@
 	SetRegView 64
     ReadRegStr $installDir HKLM "${INSTALL_REGISTRY_KEY}" InstallLocation
     ${if} $installDir == ""
-        WriteRegExpandStr HKLM "${INSTALL_REGISTRY_KEY}" InstallLocation "D:\zyplayer"
+        WriteRegExpandStr HKLM "${INSTALL_REGISTRY_KEY}" InstallLocation "C:\Apps\zyfun"
     ${endif}
 
     ReadRegStr $installDir HKCU "${INSTALL_REGISTRY_KEY}" InstallLocation
     ${if} $installDir == ""
-         WriteRegExpandStr HKCU "${INSTALL_REGISTRY_KEY}" InstallLocation "D:\zyplayer"
+         WriteRegExpandStr HKCU "${INSTALL_REGISTRY_KEY}" InstallLocation "C:\Apps\zyfun"
     ${endif}
 
 	# SetRegView 32 almost ...

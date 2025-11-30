@@ -9,6 +9,20 @@
       content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:"
     /> -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- 預先加載 MathJax 以支持 markdown-it-mathjax3 -->
+    <script>
+      // 為 markdown-it-mathjax3 提供 require polyfill
+      if (typeof require === 'undefined') {
+        window.require = function(id) {
+          // 如果是嘗試加載 mathjax，返回全局 MathJax 對象
+          if (id && (id.includes('mathjax') || id.includes('MathJax'))) {
+            return window.MathJax || {};
+          }
+          throw new Error('require is not available in renderer process');
+        };
+      }
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js" async></script>
   </head>
 
   <body>

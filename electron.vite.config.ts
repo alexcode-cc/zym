@@ -2,7 +2,7 @@ import { resolve } from 'path';
 import vue from '@vitejs/plugin-vue';
 import vueJsx from '@vitejs/plugin-vue-jsx';
 import { defineConfig, externalizeDepsPlugin, swcPlugin } from 'electron-vite';
-import { ConfigEnv, loadEnv } from 'vite';
+import { ConfigEnv, loadEnv, Plugin } from 'vite';
 import vueDevTools from 'vite-plugin-vue-devtools';
 import svgLoader from 'vite-svg-loader';
 
@@ -12,6 +12,48 @@ import Components from 'unplugin-vue-components/vite';
 import { TDesignResolver } from 'unplugin-vue-components/resolvers';
 
 const CWD = process.cwd();
+
+// 修復 markdown-it-mathjax3 的 require 問題
+const fixRequirePlugin = (): Plugin => {
+  return {
+    name: 'fix-require-for-mathjax',
+    transform(code, id) {
+      // 只處理 markdown-it-mathjax3 相關的文件
+      if (id.includes('markdown-it-mathjax3') || code.includes('requireMathjax') || code.includes('requireMarkdownItMathjax3')) {
+        let modified = code;
+        
+        // 替換 typeof require 檢查，使其返回 false（表示 require 不可用）
+        modified = modified.replace(/typeof\s+require\s*!==?\s*['"]undefined['"]/g, 'false');
+        modified = modified.replace(/typeof\s+require\s*===?\s*['"]function['"]/g, 'false');
+        modified = modified.replace(/typeof\s+require\s*===?\s*['"]undefined['"]/g, 'true');
+        
+        // 替換 require 函數調用，使其返回一個空對象或 undefined
+        // 使用更精確的正則表達式來匹配 require(...)
+        modified = modified.replace(/\brequire\s*\(\s*['"]([^'"]+)['"]\s*\)/g, (match, moduleName) => {
+          // 如果是嘗試加載 mathjax，返回一個空對象（markdown-it-mathjax3 會使用全局 MathJax）
+          if (moduleName.includes('mathjax') || moduleName.includes('MathJax')) {
+            return 'window.MathJax || {}';
+          }
+          return 'undefined';
+        });
+        
+        // 處理 eval 中的 require
+        modified = modified.replace(/eval\s*\([^)]*require[^)]*\)/g, (match) => {
+          // 在 eval 中，將 require 替換為一個安全的實現
+          return match.replace(/\brequire\s*\(/g, '(function(){return window.MathJax||{}})(');
+        });
+        
+        if (modified !== code) {
+          return {
+            code: modified,
+            map: null,
+          };
+        }
+      }
+      return null;
+    },
+  };
+};
 
 // see config at https://vitejs.dev/config/
 export default defineConfig(({ mode }: ConfigEnv) => {
@@ -120,6 +162,7 @@ export default defineConfig(({ mode }: ConfigEnv) => {
         vueJsx(),
         vueDevTools(),
         svgLoader(),
+        fixRequirePlugin(), // 修復 markdown-it-mathjax3 的 require 問題
         AutoImport({
           resolvers: [
             TDesignResolver({
